@@ -1,18 +1,22 @@
 import express, {Request} from 'express';
 import BancoMongoDB from './infra/banco/banco-mongodb';
-import ListarFilme from './aplicacao/listar-filme.use-case'
-const bancoMongoDB = new BancoMongoDB()
+import ListarFilme from './aplicacao/listar-filme.use-case';
+import SalvarFilme from './aplicacao/salva-filme.use-case';
+import cors from 'cors';
+
+const bancoMongoDB = new BancoMongoDB();
+
 const app = express();
 app.use(express.json())
-
+app.use(cors())
 
 app.get('/filmes', async (req, res) => {
     const listarFilme = new ListarFilme(bancoMongoDB)
     const filmes = await listarFilme.execute()
-    res.status(200).send(filmes)        
+    res.send(filmes).status(200)        
 });
 
-app.post('/filmes', (req:Request, res) => {
+app.post('/filmes', async (req:Request, res) => {
     const {id, titulo, descricao, foto} = req.body
     const filme:Filme = {
         id,
@@ -20,6 +24,11 @@ app.post('/filmes', (req:Request, res) => {
         descricao,
         foto,
     }
+    const salvarFilme = new SalvarFilme(bancoMongoDB)
+    const filmes = await salvarFilme.execute(filme)
+    const filmeExistente = filmes_repositorio.find(filme => filme.id === id)
+    if(filmeExistente){
+        return res.status(400).send({erro:"Filme já cadastrado"})}
     filmes_repositorio.push(filme)
     res.status(201).send(filme)
 });
@@ -34,10 +43,10 @@ app.delete('/filmes/:id', (req, res) => {
 });
 
 
-// Inicia o servidor
 app.listen(3000, () => {
     console.log('Servidor iniciado na porta 3000');
 });
+
 
 
 type Filme = {
@@ -47,4 +56,3 @@ type Filme = {
     foto: string,
 }
 let filmes_repositorio:Filme[] = []
-
